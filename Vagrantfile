@@ -25,5 +25,5 @@ git clone https://github.com/HNKNTA/devops_training.git
 echo 'cd to the repo directory'
 cd devops_training/
 echo 'changing the branch'
-git checkout -b task1
+git checkout task1
 SCRIPT
