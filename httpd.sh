@@ -1,5 +1,8 @@
 #!/bin/sh
 SERVICE="httpd"
+WORKERS_FILENAME=/etc/httpd/conf/workers.properties
+START_IP_OCTET=11
+
 
 echo "Installing "$SERVICE"..."
 yum install $SERVICE -y
@@ -19,16 +22,21 @@ echo "Doing chmod..."
 chmod +x /etc/httpd/modules/mod_jk.so
 
 echo "Creating workers.properties..."
+_workers_str="worker.lb.balance_workers="
 echo 'worker.list=lb,status
 worker.lb.type=lb
-worker.lb.balance_workers=tomcat1,tomcat2
-worker.tomcat1.host=172.20.20.11
-worker.tomcat1.port=8009
-worker.tomcat1.type=ajp13
-worker.tomcat2.host=172.20.20.12
-worker.tomcat2.port=8009
-worker.tomcat2.type=ajp13
-worker.status.type=status' > /etc/httpd/conf/workers.properties
+worker.status.type=status' > $WORKERS_FILENAME
+for ((i = 1 ; i <= $1 ; i++)); do
+  _workers_str=$_workers_str"tomcat"$i
+  if [ $i != $1 ]
+  then
+    _workers_str=$_workers_str","
+  fi
+  echo 'worker.tomcat'$i'.host=172.20.20.'$((START_IP_OCTET++))'
+worker.tomcat'$i'.port=8009
+worker.tomcat'$i'.type=ajp13' >> $WORKERS_FILENAME
+done
+echo $_workers_str >> $WORKERS_FILENAME
 
 echo "Adding mod_jk.conf to apache's config directory..."
 echo 'LoadModule jk_module modules/mod_jk.so
@@ -40,4 +48,4 @@ JkMount /test* lb
 JkMount /jk-status status' > /etc/httpd/conf.d/mod_jk.conf
 
 echo "Restarting "$SERVICE"..."
-systemctl restart httpd
+systemctl restart $SERVICE
