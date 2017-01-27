@@ -34,6 +34,14 @@ task(appendBuildVersion) {
     }
 }
 
+compileJava.doLast {
+    tasks.incrementBuildVersion.execute()
+}
+
+war.doFirst {
+    tasks.appendBuildVersion.execute()
+}
+
 class PropertiesWrapper {
     private File propFile
     private Properties properties
