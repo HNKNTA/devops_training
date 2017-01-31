@@ -20,25 +20,25 @@ node('gradle_node') {
         changes = sh(returnStdout: true, script: 'git diff')
         if (changes.length() > 0) {
             stage('Pushing build version to git.') {
-                withCredentials([usernamePassword(credentialsId: 'aa78ca40-8198-4fcd-a2c7-cb769d8dce4f', 
-                                 passwordVariable: 'git_password', usernameVariable: 'git_user')]) {
+                withCredentials([usernameColonPassword(credentialsId: 'aa78ca40-8198-4fcd-a2c7-cb769d8dce4f', 
+                                 variable: 'git_creditnails')]) {
                     sh "git config user.name '${BUILD_GIT_NAME}'"
                     sh "git config user.email '${BUILD_GIT_EMAIL}'"
                     sh 'git config push.default simple'
                     sh 'git add gradle.properties'
                     sh "git commit -m '${GIT_COMMIT_MESSAGE}'"
-                    def url = GIT_URL.replace('://', "://${git_user}:${git_password}@")
+                    def url = GIT_URL.replace('://', "://${git_creditnails}@")
                     sh "git push ${url} task3 --tags"
                 }
             }
             stage('Send the artifact to the Nexus repo.') {
-                withCredentials([usernamePassword(credentialsId: 'd8adaa74-bec3-4ea4-a0ff-bc49bfc8d758', 
-                                     passwordVariable: 'nexus_password', usernameVariable: 'nexus_user')]) {
+                withCredentials([usernameColonPassword(credentialsId: 'd8adaa74-bec3-4ea4-a0ff-bc49bfc8d758', 
+                                 variable: 'nexus_creditnails')]) {
                     def properties = readProperties file: 'gradle.properties'
                     def mainVerstion = properties[MAIN_VERSION_PROP_NAME]
                     def buildVerstion = properties[BUILD_VERSION_PROP_NAME]
                     def url = "${NEXUS_REPO_PATH}${GIT_BRANCH}/${mainVerstion}.${buildVerstion}/"
-                    sh "curl -X PUT -u ${nexus_user}:${nexus_password} -T ./build/libs/${GIT_BRANCH}.war ${url}"
+                    sh "curl -X PUT -u ${nexus_creditnails} -T ./build/libs/${GIT_BRANCH}.war ${url}"
                     
                     deploy(url + "${GIT_BRANCH}.war", mainVerstion, buildVerstion)
                 }
