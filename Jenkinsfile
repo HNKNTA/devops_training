@@ -9,12 +9,15 @@ def BUILD_VERSION_PROP_NAME = 'theBuildVersion'
 
 
 node('gradle_node') {
+    def __MUST_GIT_PUSH = false
+    
     stage('Get repo from GitHub.') {
         git branch: GIT_BRANCH, url: GIT_URL
         stage('Checking for changes in git.') {
             println(currentBuild.rawBuild.changeSets)
             if (!currentBuild.rawBuild.changeSets.isEmpty()) {
                 sh './gradlew incrementBuildVersion'
+                __MUST_GIT_PUSH = true
             }
         }
 
@@ -23,18 +26,21 @@ node('gradle_node') {
         sh './gradlew build'
     }
     
-    stage('Pushing build version to git.') {
-        withCredentials([usernameColonPassword(credentialsId: 'aa78ca40-8198-4fcd-a2c7-cb769d8dce4f', 
-                         variable: 'git_creditnails')]) {
-            sh "git config user.name '${BUILD_GIT_NAME}'"
-            sh "git config user.email '${BUILD_GIT_EMAIL}'"
-            sh 'git config push.default simple'
-            sh 'git add gradle.properties'
-            sh "git commit -m '${GIT_COMMIT_MESSAGE}'"
-            def url = GIT_URL.replace('://', "://${git_creditnails}@")
-            sh "git push ${url} task3 --tags"
+    if (__MUST_GIT_PUSH) {
+        stage('Pushing build version to git.') {
+            withCredentials([usernameColonPassword(credentialsId: 'aa78ca40-8198-4fcd-a2c7-cb769d8dce4f', 
+                             variable: 'git_creditnails')]) {
+                sh "git config user.name '${BUILD_GIT_NAME}'"
+                sh "git config user.email '${BUILD_GIT_EMAIL}'"
+                sh 'git config push.default simple'
+                sh 'git add gradle.properties'
+                sh "git commit -m '${GIT_COMMIT_MESSAGE}'"
+                def url = GIT_URL.replace('://', "://${git_creditnails}@")
+                sh "git push ${url} task3 --tags"
+            }
         }
     }
+
     stage('Send the artifact to the Nexus repo.') {
         withCredentials([usernameColonPassword(credentialsId: 'd8adaa74-bec3-4ea4-a0ff-bc49bfc8d758', 
                          variable: 'nexus_creditnails')]) {
