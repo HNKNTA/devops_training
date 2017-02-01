@@ -14,28 +14,21 @@ node('gradle_node') {
     stage('Get repo from GitHub.') {
         git branch: GIT_BRANCH, url: GIT_URL
         stage('Checking for changes in git.') {
-            println(currentBuild.rawBuild.changeSets)
-            println(currentBuild.rawBuild.changeSets.properties)
-            for(changeSetList in currentBuild.rawBuild.changeSets){
-                for(changeSet in changeSetList) {
-                    println(changeSet.getComment());
-                }
-            }
-            
             if (!currentBuild.rawBuild.changeSets.isEmpty()) {
-                try {
-                    def comment = currentBuild.rawBuild.changeSets[0].get(0).getComment()
-                    if (!comment.equals(GIT_COMMIT_MESSAGE)) {
-                        sh './gradlew incrementBuildVersion'
+                for(changeSet in currentBuild.rawBuild.changeSets[0]) {
+                    def comment = changeSet.getComment()
+                    if (!comment.startsWith(GIT_COMMIT_MESSAGE)) {
+                        println('must PUSH into Git')
                         __MUST_GIT_PUSH = true
+                        break
                     }
                 }
-                catch (Exception e) {
-                    __MUST_GIT_PUSH = false
-                }
+            }
+            if (__MUST_GIT_PUSH) {
+                println('incrementBuildVersion')
+                sh './gradlew incrementBuildVersion'
             }
         }
-
     }
     stage('Build project.') {
         sh './gradlew build'
