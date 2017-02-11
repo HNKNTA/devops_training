@@ -1,5 +1,5 @@
 def GIT_URL = 'https://github.com/HNKNTA/devops_training.git'
-def GIT_BRANCH = 'task3'
+def GIT_BRANCH = 'task4'
 def GIT_COMMIT_MESSAGE = 'bump build version'
 def BUILD_GIT_NAME = 'Jenkins'
 def BUILD_GIT_EMAIL = 'hnknta@gmail.com'
@@ -66,7 +66,7 @@ node('gradle_node') {
 def deploy(url,  mainVerstion, buildVerstion) {
     def TOMCAT_WEBAPP_DIR = '/usr/local/tomcat/webapps/'
     def HTTPD_IP = '172.18.0.2'
-    def PROJECT_MOUNT = 'task3'
+    def PROJECT_MOUNT = 'task4'
     def VERSION_CHECK_STR = "v${mainVerstion} build ${buildVerstion}"
     def TOMCATS_IP = [
         'tomcat1' : '172.18.0.3:8080',
