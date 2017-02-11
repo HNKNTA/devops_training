@@ -12,7 +12,7 @@ node('gradle_node') {
     def __MUST_GIT_PUSH = false
     
     stage('Get repo from GitHub.') {
-        git branch: GIT_BRANCH, url: GIT_URL
+        get_git_repo(GIT_URL, GIT_BRANCH)
         stage('Checking for changes in git.') {
             if (!currentBuild.rawBuild.changeSets.isEmpty()) {
                 for(changeSet in currentBuild.rawBuild.changeSets[0]) {
@@ -44,24 +44,60 @@ node('gradle_node') {
                 sh 'git add gradle.properties'
                 sh "git commit -m '${GIT_COMMIT_MESSAGE}'"
                 def url = GIT_URL.replace('://', "://${git_creditnails}@")
-                sh "git push ${url} task3 --tags"
+                sh "git push ${url} ${GIT_BRANCH} --tags"
             }
         }
     }
 
+    def properties = readProperties file: 'gradle.properties'
+    def mainVerstion = properties[MAIN_VERSION_PROP_NAME]
+    def buildVerstion = properties[BUILD_VERSION_PROP_NAME]
+
+    def version = mainVerstion + '.' + buildVerstion
+
     stage('Send the artifact to the Nexus repo.') {
         withCredentials([usernameColonPassword(credentialsId: 'd8adaa74-bec3-4ea4-a0ff-bc49bfc8d758', 
                          variable: 'nexus_creditnails')]) {
-            def properties = readProperties file: 'gradle.properties'
-            def mainVerstion = properties[MAIN_VERSION_PROP_NAME]
-            def buildVerstion = properties[BUILD_VERSION_PROP_NAME]
             def url = "${NEXUS_REPO_PATH}${GIT_BRANCH}/${mainVerstion}.${buildVerstion}/"
             sh "curl -X PUT -u ${nexus_creditnails} -T ./build/libs/${GIT_BRANCH}.war ${url}"
             
             deploy(url + "${GIT_BRANCH}.war", mainVerstion, buildVerstion)
         }
     }
+
+    node('msi') {
+        stage('Build docker image.') {
+            build_docker_image(GIT_URL, GIT_BRANCH, version)
+        }
+    }
+
+    node('mini-comp') {
+        stage('Docker image check.') {
+            def image_name = "172.16.32.1:5000/${GIT_BRANCH}:${version}"
+            def container_name = 'deploy_test'
+            def VERSION_CHECK_STR = "v${mainVerstion} build ${buildVerstion}"
+
+            try {
+                sh "docker pull ${image_name}"
+                sh "docker run -d --name=${container_name} -p 8080:8080 ${image_name}"
+
+                sleep(10)
+
+                if (check_deploy("172.16.32.6:8080/${GIT_BRANCH}", VERSION_CHECK_STR)) {
+                    println("Deploy is OK.")
+                }
+                else {
+                    error("Deploy failed on docker container.")
+                } 
+            }
+            finally {
+                sh "docker stop ${container_name}"
+                sh "docker rm ${container_name}"
+            }
+        }
+    }
 }
+
 
 def deploy(url,  mainVerstion, buildVerstion) {
     def TOMCAT_WEBAPP_DIR = '/usr/local/tomcat/webapps/'
@@ -83,8 +119,7 @@ def deploy(url,  mainVerstion, buildVerstion) {
             sleep(10)
             println('Check if version updated.')
             def tomcat_ip = TOMCATS_IP["tomcat${i}"]
-            def response = httpRequest "http://${tomcat_ip}/${PROJECT_MOUNT}/"
-            if (response.content.contains(VERSION_CHECK_STR)) {
+            if (check_deploy("${tomcat_ip}/${PROJECT_MOUNT}", VERSION_CHECK_STR)) {
                 println("Starting LB for tomcat${i}")
                 httpRequest "http://${HTTPD_IP}/jk-status?cmd=update&from=list&w=lb&sw=tomcat${i}&vwa=0"
             }
@@ -95,3 +130,20 @@ def deploy(url,  mainVerstion, buildVerstion) {
     }
 }
 
+def check_deploy(uri, value) {
+    def response = httpRequest "http://${uri}/"
+    return response.content.contains(value)
+}
+
+def get_git_repo(url, branch) {
+    git branch: branch, url: url
+}
+
+def build_docker_image(git_url, git_branch, version) {
+    get_git_repo(git_url, git_branch)
+    def registry = 'localhost:5000/'
+    def tag = "${git_branch}:${version}"
+    sh "docker build --build-arg version=${version} --build-arg project_name=${git_branch} -t ${tag} ."
+    sh "docker tag ${tag} ${registry}${tag}"
+    sh "docker push ${registry}${tag}"
+}
