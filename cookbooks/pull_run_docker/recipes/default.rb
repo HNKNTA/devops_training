@@ -1,5 +1,2 @@
-#
-# Cookbook:: pull_run_docker
-# Recipe:: default
-#
-# Copyright:: 2017, The Authors, All Rights Reserved.
+include_recipe 'pull_run_docker::pull'
+include_recipe 'pull_run_docker::run'

@@ -1,5 +1,3 @@
-#
-# Cookbook:: install_docker
-# Recipe:: default
-#
-# Copyright:: 2017, The Authors, All Rights Reserved.
+include_recipe 'install_docker::install'
+include_recipe 'install_docker::insecure_registry'
+include_recipe 'install_docker::run_and_enable'

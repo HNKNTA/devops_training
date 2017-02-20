@@ -5,7 +5,7 @@ license 'all_rights'
 description 'Installs/Configures pull_run_docker'
 long_description 'Installs/Configures pull_run_docker'
 depends 'docker'
-version '0.1.7'
+version '0.1.8'
 
 # The `issues_url` points to the location where issues for this cookbook are
 # tracked.  A `View Issues` link will be displayed on this cookbook's page when
