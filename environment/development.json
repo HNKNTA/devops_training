@@ -1,14 +1,1 @@
-{
-  "name": "development",
-  "description": "",
-  "cookbook_versions": {
-    "install_docker": "= 0.1.11",
-    "pull_run_docker": "= 1.0.52",
-  },
-  "json_class": "Chef::Environment",
-  "chef_type": "environment",
-  "default_attributes": {
-  },
-  "override_attributes": {
-  }
-}
+{"default_attributes":{},"chef_type":"environment","name":"development","description":"","json_class":"Chef::Environment","cookbook_versions":{"pull_run_docker":"= 1.0.52","install_docker":"= 0.1.11"},"override_attributes":{}}
