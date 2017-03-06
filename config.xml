@@ -107,8 +107,8 @@ def RECIPE_ATTRIBUTES_VERSION_STR = &apos;default[&quot;image_version&quot;]&apo
 def RECIPE_METADATA_FILE = &apos;cookbooks/pull_run_docker/metadata.rb&apos;
 def RECIPE_METADATA_VERSION_STR = &apos;version&apos;
 def ENVIRONMENT_JSON_FILE = &apos;environment/development.json&apos;
-def ENVIRONMENT_JSON_KEY = &apos;default_attributes&apos;
-def ENVIRONMENT_JSON_SUBKEY = &apos;version&apos;
+def ENVIRONMENT_JSON_KEY = &apos;cookbook_versions&apos;
+def ENVIRONMENT_JSON_SUBKEY = &apos;pull_run_docker&apos;
 
 node {
     stage(&apos;Get repo from GitHub.&apos;) {
@@ -121,7 +121,7 @@ node {
         update_version_in_file(RECIPE_METADATA_FILE, 
                                RECIPE_METADATA_VERSION_STR, version)
         updete_version_json(ENVIRONMENT_JSON_FILE, ENVIRONMENT_JSON_KEY, 
-                            ENVIRONMENT_JSON_SUBKEY, version) 
+                            ENVIRONMENT_JSON_SUBKEY, &apos;= &apos; + version) 
     }
     
     stage(&apos;Checking for changes.&apos;) {
