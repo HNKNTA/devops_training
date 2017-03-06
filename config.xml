@@ -1,0 +1,189 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job@2.10">
+  <actions/>
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <org.biouno.unochoice.CascadeChoiceParameter plugin="uno-choice@1.5.2">
+          <name>environment</name>
+          <description></description>
+          <randomName>choice-parameter-36934971518604</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1.27">
+              <script>&apos;knife environment list&apos;.execute().text.tokenize() - [&apos;_default&apos;]
+
+</script>
+              <sandbox>false</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1.27">
+              <script></script>
+              <sandbox>false</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>chef_deploy</projectName>
+          <parameters class="linked-hash-map"/>
+          <referencedParameters></referencedParameters>
+          <choiceType>PT_SINGLE_SELECT</choiceType>
+          <filterable>false</filterable>
+        </org.biouno.unochoice.CascadeChoiceParameter>
+        <org.biouno.unochoice.CascadeChoiceParameter plugin="uno-choice@1.5.2">
+          <name>role</name>
+          <description></description>
+          <randomName>choice-parameter-36934973545527</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1.27">
+              <script>&apos;knife role list&apos;.execute().text.tokenize()
+</script>
+              <sandbox>false</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1.27">
+              <script></script>
+              <sandbox>false</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>chef_deploy</projectName>
+          <parameters class="linked-hash-map"/>
+          <referencedParameters></referencedParameters>
+          <choiceType>PT_SINGLE_SELECT</choiceType>
+          <filterable>false</filterable>
+        </org.biouno.unochoice.CascadeChoiceParameter>
+        <org.biouno.unochoice.CascadeChoiceParameter plugin="uno-choice@1.5.2">
+          <name>version</name>
+          <description></description>
+          <randomName>choice-parameter-42611935064706</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1.27">
+              <script>def NEXUS_URL = &apos;http://172.18.0.7:8081/nexus/content/repositories/training/task4/&apos;
+
+def web_context = new URL(NEXUS_URL).text
+def regexStr = /&gt;(\d{1,2}\.\d{1,3}(?:\.\d{1,6})?)/
+matcher = web_context =~ regexStr
+
+def result = []
+if(matcher.find()) {
+    def iter = matcher.iterator()
+    while(iter.hasNext()) {
+        result.add(iter.next()[1])
+    }
+}
+
+result.reverse()
+</script>
+              <sandbox>false</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1.27">
+              <script></script>
+              <sandbox>false</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>chef_deploy</projectName>
+          <parameters class="linked-hash-map"/>
+          <referencedParameters></referencedParameters>
+          <choiceType>PT_SINGLE_SELECT</choiceType>
+          <filterable>false</filterable>
+        </org.biouno.unochoice.CascadeChoiceParameter>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+    <org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
+      <triggers/>
+    </org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
+  </properties>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.29">
+    <script>import groovy.json.JsonSlurperClassic
+import groovy.json.JsonOutput
+
+def BUILD_GIT_NAME = &apos;Jenkins&apos;
+def BUILD_GIT_EMAIL = &apos;hnknta@gmail.com&apos;
+def GIT_URL = &apos;https://github.com/HNKNTA/devops_training.git&apos;
+def GIT_BRANCH = &apos;task7&apos;
+def GIT_COMMIT_MESSAGE = &apos;bump version&apos;
+def RECIPE_ATTRIBUTES_FILE = &apos;cookbooks/pull_run_docker/attributes/default.rb&apos;
+def RECIPE_ATTRIBUTES_VERSION_STR = &apos;default[&quot;image_version&quot;]&apos;
+def RECIPE_METADATA_FILE = &apos;cookbooks/pull_run_docker/metadata.rb&apos;
+def RECIPE_METADATA_VERSION_STR = &apos;version&apos;
+def ENVIRONMENT_JSON_FILE = &apos;environment/development.json&apos;
+def ENVIRONMENT_JSON_KEY = &apos;default_attributes&apos;
+def ENVIRONMENT_JSON_SUBKEY = &apos;version&apos;
+
+node {
+    stage(&apos;Get repo from GitHub.&apos;) {
+        get_git_repo(GIT_URL, GIT_BRANCH)
+    }
+    
+    stage(&apos;Updating versions in files.&apos;) {
+        update_version_in_file(RECIPE_ATTRIBUTES_FILE, 
+                               RECIPE_ATTRIBUTES_VERSION_STR, version, &apos; = &apos;)
+        update_version_in_file(RECIPE_METADATA_FILE, 
+                               RECIPE_METADATA_VERSION_STR, version)
+        updete_version_json(ENVIRONMENT_JSON_FILE, ENVIRONMENT_JSON_KEY, 
+                            ENVIRONMENT_JSON_SUBKEY, version) 
+    }
+    
+    stage(&apos;Checking for changes.&apos;) {
+        changes = sh(returnStdout: true, script: &apos;git diff&apos;)
+        if (changes.length() &gt; 0) {
+            stage(&apos;Uploading changes.&apos;) {
+                println(&apos;Copying key files&apos;)
+                sh &apos;cp -r ../../.chef .&apos;
+                println(&apos;Uploading cookbooks.&apos;)
+                sh &apos;knife upload .&apos;
+                println(&apos;Uploading environments.&apos;)
+                sh &apos;knife environment from file environment/*.json&apos;
+                println(&apos;Pushing changes to git.&apos;)
+                withCredentials([usernameColonPassword(credentialsId: &apos;aa78ca40-8198-4fcd-a2c7-cb769d8dce4f&apos;, 
+                             variable: &apos;git_creditnails&apos;)]) {
+                    sh &quot;git config user.name &apos;${BUILD_GIT_NAME}&apos;&quot;
+                    sh &quot;git config user.email &apos;${BUILD_GIT_EMAIL}&apos;&quot;
+                    sh &apos;git config push.default simple&apos;
+                    sh &apos;git add *&apos;
+                    sh &quot;git commit -m &apos;${GIT_COMMIT_MESSAGE}&apos;&quot;
+                    def url = GIT_URL.replace(&apos;://&apos;, &quot;://${git_creditnails}@&quot;)
+                    sh &quot;git push ${url} ${GIT_BRANCH} --tags&quot;
+                }
+            }
+            stage(&apos;Running chef-client.&apos;) {
+                withCredentials([usernamePassword(credentialsId: &apos;29027f1d-cc5d-461a-bf41-95d61e213fad&apos;, 
+                passwordVariable: &apos;chef_node_password&apos;, usernameVariable: &apos;chef_node_user&apos;)]) {
+                    sh &quot;knife ssh &apos;chef_environment:${environment} AND role:${role}&apos; &apos;chef-client&apos; -x ${chef_node_user} -P ${chef_node_password}&quot;
+                }
+            }
+        }
+    }
+}
+
+
+def get_git_repo(url, branch) {
+    git branch: branch, url: url
+}
+
+def update_version_in_file(file, vesrion_line, new_version, delimiter=&apos; &apos;) {
+    def string_file = readFile file: file
+    def lines = string_file.tokenize(&apos;\n&apos;)
+
+    for(i=0; i&lt;lines.size(); i++) {
+        if(lines[i].startsWith(vesrion_line)) {
+            lines[i] = vesrion_line + delimiter + &apos;&quot;&apos; + version + &apos;&quot;&apos;
+        }
+    }
+    
+    writeFile file: file, text: lines.join(&apos;\n&apos;) + &apos;\n&apos;
+}
+
+def updete_version_json(file, key, subkey, value) {
+    def json_file = readFile file: file
+    def json_map = new JsonSlurperClassic().parseText(json_file)
+
+    json_map[key][subkey] = value
+    
+    def json = JsonOutput.toJson(json_map)
+    writeFile file: file, text: json + &apos;\n&apos;
+}</script>
+    <sandbox>false</sandbox>
+  </definition>
+  <triggers/>
+</flow-definition>
