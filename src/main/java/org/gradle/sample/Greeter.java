@@ -5,7 +5,7 @@ import org.apache.log4j.LogManager;
 import org.apache.commons.io.IOUtils;
 
 public class Greeter {
-    public String getGreeting() throws Exception {
+    public String getGreeting() {
         LogManager.getRootLogger().info("generating greeting.");
         InputStream greetingStr = getClass().getResourceAsStream("/greeting.txt");
         try {
